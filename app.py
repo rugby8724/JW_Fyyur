@@ -44,15 +44,16 @@ class Venue(db.Model):
     __tablename__ = 'venue'
 
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String)
+    name = db.Column(db.String(120))
     city = db.Column(db.String(120))
     state = db.Column(db.String(120))
     address = db.Column(db.String(120))
     phone = db.Column(db.String(120))
     image_link = db.Column(db.String(500))
     facebook_link = db.Column(db.String(120))
+    website = db.Column(db.String(120))
     seeking_talent = db.Column(db.Boolean, default=False)
-    seeking_description = db.Column(db.String(120))
+    seeking_description = db.Column(db.Text(240))
     artists = db.relationship('Artist', secondary='show',
               backref=db.backref('venues', lazy=True))
 
@@ -69,8 +70,9 @@ class Artist(db.Model):
     genres = db.Column(db.String(120))
     image_link = db.Column(db.String(500))
     facebook_link = db.Column(db.String(120))
+    website = db.Column(db.String(120))
     seeking_venue = db.Column(db.Boolean, default=False)
-    seeking_description = db.Column(db.String(120))
+    seeking_description = db.Column(db.Text(240))
 
     # TODO: implement any missing fields, as a database migration using Flask-Migrate
 
@@ -114,16 +116,15 @@ def search_venues():
   # TODO: implement search on artists with partial string search. Ensure it is case-insensitive.
   # seach for Hop should return "The Musical Hop".
   # search for "Music" should return "The Musical Hop" and "Park Square Live Music & Coffee"
-  search = request.form.get('search_term', '')
-  venues = crud.get_venue_by_partial_name(search)
-  response = {
-        "count": len(venues),
-        "data": [
-            venue.search for venue in venues
-            ]
-            }
+    search = request.form.get('search_term', None)
+    data = Venue.query.filter(
+           Venue.name.ilike("%{}%".format(search)))
+    response = {
+        "count": data.count(),
+        "data": data
+    }
 
-  return render_template('pages/search_venues.html', results=response,
+    return render_template('pages/search_venues.html', results=response,
                            search_term=request.form.get('search_term', ''))
 
 @app.route('/venues/<int:venue_id>')
@@ -153,7 +154,11 @@ def create_venue_submission():
                          address=form.address.data,
                          phone=form.phone.data,
                          image_link=form.image_link.data,
-                         facebook_link=form.facebook_link.data)
+                         facebook_link=form.facebook_link.data,
+                         website=form.website.data,
+                         seeking_talent=form.seeking_talent.data,
+                         seeking_description=form.seeking_description.data
+                         )
     db.session.add(venue_create)
     db.session.commit()
 
@@ -201,15 +206,14 @@ def search_artists():
   # TODO: implement search on artists with partial string search. Ensure it is case-insensitive.
   # seach for "A" should return "Guns N Petals", "Matt Quevado", and "The Wild Sax Band".
   # search for "band" should return "The Wild Sax Band".
-  response={
-    "count": 1,
-    "data": [{
-      "id": 4,
-      "name": "Guns N Petals",
-      "num_upcoming_shows": 0,
-    }]
-  }
-  return render_template('pages/search_artists.html', results=response, search_term=request.form.get('search_term', ''))
+    search = request.form.get('search_term', None)
+    data = Artist.query.filter(
+           Artist.name.ilike('%' + request.form['search_term'] + '%'))
+    response = {
+      "count": data.count(),
+      "data": data
+    }
+    return render_template('pages/search_artists.html', results=response, search_term=request.form.get('search_term', ''))
 
 @app.route('/artists/<int:artist_id>')
 def show_artist(artist_id):
@@ -233,6 +237,9 @@ def edit_artist(artist_id):
     form.genres.data = artist.genres
     form.image_link.data = artist.image_link
     form.facebook_link.data = artist.facebook_link
+    form.website.data = artist.website
+    form.seeking_venue.data = artist.seeking_venue
+    form.seeking_description.data = artist.seeking_description
   # TODO: populate form with fields from artist with ID <artist_id>
     return render_template('forms/edit_artist.html', form=form, artist=artist)
 
@@ -250,6 +257,9 @@ def edit_artist_submission(artist_id):
         artist.generes = form.genres.data
         artist.image_link = form.image_link.data
         artist.facebook_link = form.facebook_link.data
+        artist.website = form.website.data
+        artist.seeking_venue = form.seeking_venue.data
+        artist.seeking_description = form.seeking_description.data
         db.session.commit()
         flash('Artist Updated')
     except:
@@ -272,6 +282,9 @@ def edit_venue(venue_id):
   form.phone.data = venue.phone
   form.image_link.data = venue.image_link
   form.facebook_link.data = venue.facebook_link
+  form.website.data = venue.website
+  form.seeking_talent.data = venue.seeking_talent
+  form.seeking_description.data = venue.seeking_description
   # TODO: populate form with values from venue with ID <venue_id>
   return render_template('forms/edit_venue.html', form=form, venue=venue)
 
@@ -289,6 +302,9 @@ def edit_venue_submission(venue_id):
         venue.phone = form.phone.data
         venue.image_link = form.image_link.data
         venue.facebook_link = form.facebook_link.data
+        venue.website = form.website.data
+        venue.seeking_talent = form.seeking_talent.data
+        venue.seeking_description = form.seeking_description.data
         db.session.commit()
         flash('Venue Updated')
     except:
@@ -319,7 +335,10 @@ def create_artist_submission():
                               phone=form.phone.data,
                               genres=form.genres.data,
                               image_link=form.image_link.data,
-                              facebook_link=form.facebook_link.data,)
+                              facebook_link=form.facebook_link.data,
+                              website=form.website.data,
+                              seeking_venue=form.seeking_venue.data,
+                              seeking_description=form.seeking_description.data)
       db.session.add(artists_create)
       db.session.commit()
 
