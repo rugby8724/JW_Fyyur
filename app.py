@@ -9,6 +9,7 @@ from datetime import datetime
 from flask import Flask, render_template, request, Response, flash, redirect, url_for
 from flask_moment import Moment
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.orm import relationship, backref
 from flask_migrate import Migrate
 import logging
 from logging import Formatter, FileHandler
@@ -31,13 +32,7 @@ migrate = Migrate(app, db)
 # Models.
 #----------------------------------------------------------------------------#
 
-class Show(db.Model):
-    __tablename__ = 'show'
 
-    id = db.Column(db.Integer, primary_key=True)
-    venue_id = db.Column(db.Integer, db.ForeignKey('venue.id'))
-    artist_id = db.Column(db.Integer, db.ForeignKey('artist.id'))
-    start_time = db.Column(db.DateTime, nullable=False)
 
 
 class Venue(db.Model):
@@ -49,13 +44,13 @@ class Venue(db.Model):
     state = db.Column(db.String(120))
     address = db.Column(db.String(120))
     phone = db.Column(db.String(120))
+    genres = db.Column(db.String(120))
     image_link = db.Column(db.String(500))
     facebook_link = db.Column(db.String(120))
     website = db.Column(db.String(120))
     seeking_talent = db.Column(db.Boolean, default=False)
     seeking_description = db.Column(db.Text(240))
-    artists = db.relationship('Artist', secondary='show',
-              backref=db.backref('venues', lazy=True))
+    artist = relationship('Artist', secondary='shows')
 
     # TODO: implement any missing fields, as a database migration using Flask-Migrate
 
@@ -73,6 +68,19 @@ class Artist(db.Model):
     website = db.Column(db.String(120))
     seeking_venue = db.Column(db.Boolean, default=False)
     seeking_description = db.Column(db.Text(240))
+    venues = relationship('Venue', secondary='shows')
+
+class Show(db.Model):
+    __tablename__ = 'shows'
+
+    id = db.Column(db.Integer, primary_key=True)
+    venue_id = db.Column(db.Integer, db.ForeignKey('venue.id'))
+    artist_id = db.Column(db.Integer, db.ForeignKey('artist.id'))
+    start_time = db.Column(db.DateTime, nullable=False)
+    venue = relationship('Venue', backref=backref('shows',
+                         cascade='all, delete-orphan'))
+    artist = relationship('Artist', backref=backref('shows',
+                         cascade='all, delete-orphan'))
 
     # TODO: implement any missing fields, as a database migration using Flask-Migrate
 
@@ -153,6 +161,7 @@ def create_venue_submission():
                          state=form.state.data,
                          address=form.address.data,
                          phone=form.phone.data,
+                         genres=form.genres.data,
                          image_link=form.image_link.data,
                          facebook_link=form.facebook_link.data,
                          website=form.website.data,
@@ -280,6 +289,7 @@ def edit_venue(venue_id):
   form.state.data = venue.state
   form.address.data = venue.address
   form.phone.data = venue.phone
+  form.genres.data = venue.genres
   form.image_link.data = venue.image_link
   form.facebook_link.data = venue.facebook_link
   form.website.data = venue.website
@@ -300,6 +310,7 @@ def edit_venue_submission(venue_id):
         venue.state = form.state.data
         venue.address = form.address.data
         venue.phone = form.phone.data
+        venue.genres = form.genres.data
         venue.image_link = form.image_link.data
         venue.facebook_link = form.facebook_link.data
         venue.website = form.website.data
