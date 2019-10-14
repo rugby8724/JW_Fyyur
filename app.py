@@ -44,7 +44,7 @@ class Venue(db.Model):
     state = db.Column(db.String(120))
     address = db.Column(db.String(120))
     phone = db.Column(db.String(120))
-    genres = db.Column(db.String(120))
+    genres = db.Column(db.ARRAY(db.String(120)))
     image_link = db.Column(db.String(500))
     facebook_link = db.Column(db.String(120))
     website = db.Column(db.String(120))
@@ -62,7 +62,7 @@ class Artist(db.Model):
     city = db.Column(db.String(120))
     state = db.Column(db.String(120))
     phone = db.Column(db.String(120))
-    genres = db.Column(db.String(120))
+    genres = db.Column(db.ARRAY(db.String(120)))
     image_link = db.Column(db.String(500))
     facebook_link = db.Column(db.String(120))
     website = db.Column(db.String(120))
@@ -81,6 +81,8 @@ class Show(db.Model):
                          cascade='all, delete-orphan'))
     artist = relationship('Artist', backref=backref('shows',
                          cascade='all, delete-orphan'))
+
+
 
     # TODO: implement any missing fields, as a database migration using Flask-Migrate
 
@@ -139,8 +141,41 @@ def search_venues():
 def show_venue(venue_id):
   # shows the venue page with the given venue_id
   # TODO: replace with real venue data from the venues table, using venue_id
-  venue_info = Venue.query.get_or_404(venue_id)
-  return render_template('pages/show_venue.html', venue=venue_info)
+  venue = Venue.query.get_or_404(venue_id)
+
+  shows = Show.query.filter(Show.venue_id==venue_id).join(Artist, Show.artist_id == Artist.id).all()
+  upcoming_shows = [{
+    "artist_id": show.artist.id,
+    "artist_name": show.artist.name,
+    "artist_image_link": show.artist.image_link,
+    "start_time": show.start_time.strftime("%Y-%m-%d %H:%M:%S")
+  } for show in shows if show.start_time > datetime.now()]
+
+  past_shows = [{
+    "artist_id": show.artist.id,
+    "artist_name": show.artist.name,
+    "artist_image_link": show.artist.image_link,
+    "start_time": show.start_time.strftime("%Y-%m-%d %H:%M:%S")
+  } for show in shows if show.start_time <= datetime.now()]
+
+  response={
+    "id": venue.id,
+    "name": venue.name,
+    "genres": venue.genres,
+    "city": venue.city,
+    "state": venue.state,
+    "phone": venue.phone,
+    "website": venue.website,
+    "facebook_link": venue.facebook_link,
+    "seeking_talent": venue.seeking_talent,
+    "seeking_description": venue.seeking_description,
+    "image_link": venue.image_link,
+    "past_shows": past_shows,
+    "upcoming_shows": upcoming_shows,
+    "past_shows_count": len(past_shows),
+    "upcoming_shows_count": len(upcoming_shows),
+  }
+  return render_template('pages/show_venue.html', venue=response)
 
 #  Create Venue
 #  ----------------------------------------------------------------
@@ -222,14 +257,49 @@ def search_artists():
       "count": data.count(),
       "data": data
     }
-    return render_template('pages/search_artists.html', results=response, search_term=request.form.get('search_term', ''))
+    return render_template('pages/search_artists.html', results=response,
+                           search_term=request.form.get('search_term', ''))
 
 @app.route('/artists/<int:artist_id>')
 def show_artist(artist_id):
   # shows the venue page with the given venue_id
   # TODO: replace with real venue data from the venues table, using venue_id
-  artist_info = Artist.query.get_or_404(artist_id)
-  return render_template('pages/show_artist.html', artist=artist_info)
+  artist = Artist.query.get_or_404(artist_id)
+  shows = Show.query.filter(Show.artist_id==artist_id).join(Venue, Show.venue_id == Venue.id).all()
+
+  upcoming_shows = [{
+    "venue_id": show.venue.id,
+    "venue_name": show.venue.name,
+    "venue_image_link": show.venue.image_link,
+    "start_time": show.start_time.strftime("%Y-%m-%d %H:%M:%S")
+  } for show in shows if show.start_time > datetime.now()]
+
+  past_shows = [{
+    "venue_id": show.venue.id,
+    "venue_name": show.venue.name,
+    "venue_image_link": show.venue.image_link,
+    "start_time": show.start_time.strftime("%Y-%m-%d %H:%M:%S")
+  } for show in shows if show.start_time <= datetime.now()]
+
+  response={
+    "id": artist.id,
+    "name": artist.name,
+    "genres": artist.genres,
+    "city": artist.city,
+    "state": artist.state,
+    "phone": artist.phone,
+    "website": artist.website,
+    "facebook_link": artist.facebook_link,
+    "seeking_venue": artist.seeking_venue,
+    "seeking_description": artist.seeking_description,
+    "image_link": artist.image_link,
+    "past_shows": past_shows,
+    "upcoming_shows": upcoming_shows,
+    "past_shows_count": len(past_shows),
+    "upcoming_shows_count": len(upcoming_shows),
+  }
+
+  return render_template('pages/show_artist.html', artist=response)
 
 #  Update
 #  ----------------------------------------------------------------
