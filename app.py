@@ -76,7 +76,7 @@ class Show(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     venue_id = db.Column(db.Integer, db.ForeignKey('venue.id'))
     artist_id = db.Column(db.Integer, db.ForeignKey('artist.id'))
-    start_time = db.Column(db.DateTime, nullable=False)
+    start_time = db.Column(db.DateTime, nullable=False,)
     venue = relationship('Venue', backref=backref('shows',
                          cascade='all, delete-orphan'))
     artist = relationship('Artist', backref=backref('shows',
@@ -118,7 +118,7 @@ def index():
 def venues():
   # TODO: replace with real venues data.
   #       num_shows should be aggregated based on number of upcoming shows per venue.
-  data = Venue.query.all()
+  data = Venue.query.order_by(Venue.city).all()
   return render_template('pages/venues.html', areas=data);
 
 @app.route('/venues/search', methods=['POST'])
@@ -129,12 +129,12 @@ def search_venues():
     search = request.form.get('search_term', None)
     data = Venue.query.filter(
            Venue.name.ilike("%{}%".format(search)))
-    response = {
+    search_data = {
         'count': data.count(),
         'data': data
     }
 
-    return render_template('pages/search_venues.html', results=response,
+    return render_template('pages/search_venues.html', results=search_data,
                            search_term=request.form.get('search_term', ''))
 
 @app.route('/venues/<int:venue_id>')
@@ -158,7 +158,7 @@ def show_venue(venue_id):
     'start_time': show.start_time.strftime('%Y-%m-%d %H:%M:%S')
   } for show in shows if show.start_time <= datetime.now()]
 
-  response={
+  venue_data={
     'id': venue.id,
     'name': venue.name,
     'city': venue.city,
@@ -176,7 +176,7 @@ def show_venue(venue_id):
     'past_shows_count': len(past_shows),
     'upcoming_shows_count': len(upcoming_shows),
   }
-  return render_template('pages/show_venue.html', venue=response)
+  return render_template('pages/show_venue.html', venue=venue_data)
 
 #  Create Venue
 #  ----------------------------------------------------------------
@@ -243,7 +243,7 @@ def delete_venue(venue_id):
 @app.route('/artists')
 def artists():
   # TODO: replace with real data returned from querying the database
-  data = Artist.query.all()
+  data = Artist.query.order_by(Artist.name).all()
   return render_template('pages/artists.html', artists=data)
 
 @app.route('/artists/search', methods=['POST'])
@@ -282,7 +282,7 @@ def show_artist(artist_id):
     'start_time': show.start_time.strftime('%Y-%m-%d %H:%M:%S')
   } for show in shows if show.start_time <= datetime.now()]
 
-  response={
+  artist_data={
     'id': artist.id,
     'name': artist.name,
     'genres': artist.genres,
@@ -300,7 +300,7 @@ def show_artist(artist_id):
     'upcoming_shows_count': len(upcoming_shows),
   }
 
-  return render_template('pages/show_artist.html', artist=response)
+  return render_template('pages/show_artist.html', artist=artist_data)
 
 #  Update
 #  ----------------------------------------------------------------
@@ -440,8 +440,15 @@ def shows():
   # displays list of shows at /shows
   # TODO: replace with real venues data.
   #       num_shows should be aggregated based on number of upcoming shows per venue.
-  shows = Show.query.all()
-  return render_template('pages/shows.html', shows=shows)
+  shows = Show.query.join(Artist, Show.artist_id == Artist.id).join(Venue, Show.venue_id == Venue.id).all()
+  show_data = [{
+    'venue_id': show.venue.id,
+    'venue_name': show.venue.name,
+    'artist_id': show.artist.id,
+    'artist_name': show.artist.name,
+    'artist_image_link': show.artist.image_link,
+    'start_time': show.start_time.strftime("%Y-%m-%d %H:%M:%S")} for show in shows]
+  return render_template('pages/shows.html', shows=show_data)
 
 @app.route('/shows/create')
 def create_shows():
