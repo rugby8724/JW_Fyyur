@@ -33,7 +33,7 @@
 				<i class="fas fa-quote-left"></i> {{ artist.seeking_description }} <i class="fas fa-quote-right"></i>
 			</div>
 		</div>
-		{% else %}	
+		{% else %}
 		<p class="not-seeking">
 			<i class="fas fa-moon"></i> Not currently seeking performance venues
 		</p>
@@ -42,6 +42,9 @@
 	<div class="col-sm-6">
 		<img src="{{ artist.image_link }}" alt="Venue Image" />
 	</div>
+</div>
+<div class="update_delete">
+	<a class="btn btn-primary" href='/artists/{{ artist.id }}/edit'>Update</a>
 </div>
 <section>
 	<h2 class="monospace">{{ artist.upcoming_shows_count }} Upcoming {% if artist.upcoming_shows_count == 1 %}Show{% else %}Shows{% endif %}</h2>
@@ -73,4 +76,3 @@
 </section>
 
 {% endblock %}
-
