@@ -161,8 +161,8 @@ def show_venue(venue_id):
   venue_data={
     'id': venue.id,
     'name': venue.name,
-    'city': venue.city,
     'address': venue.address,
+    'city': venue.city,
     'state': venue.state,
     'phone': venue.phone,
     'genres': venue.genres,
@@ -286,6 +286,7 @@ def show_artist(artist_id):
     'id': artist.id,
     'name': artist.name,
     'genres': artist.genres,
+    'address': artist.address,
     'city': artist.city,
     'state': artist.state,
     'phone': artist.phone,
